@@ -18,16 +18,10 @@ def main():
     df = pd.read_csv('../data/ratings.csv', sep = ';')
     
     # change ISBN into unique numerical value
-    print df['ISBN'].nunique()
-    
     df['ISBN'] = pd.factorize(df['ISBN'])[0]
 
     print df.head(5)
-    print df.shape
-    
-    print df['ISBN'].nunique()
-    print df['User-ID'].nunique()
-    print df['Book-Rating'].nunique()
+
     reader = Reader(rating_scale = (0,10))
 
     data = Dataset.load_from_df(df[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
@@ -48,14 +42,14 @@ def main():
     #cross_validate(BaselineOnly(bsl_options = bsl_options2), data, verbose=True)
     #cross_validate(NormalPredictor(), data, verbose=True)
 
-    alg = SVD(n_factors = 25, verbose = True)
-    alg1 = SVD(n_factors = 50, verbose = True)
-    alg2 = SVD(verbose = True)
-    alg3 = SVD(biased = False, verbose = True)
+    # alg = SVD(n_factors = 25, verbose = True)
+    # alg1 = SVD(n_factors = 50, verbose = True)
+    alg2 = SVD(n_epochs = 5 ,lr_all = 0.05, verbose = True)
+    #alg3 = SVD(biased = False, verbose = True)
     
     # cross_validate(alg, data, n_jobs = -1, verbose=True)
     # cross_validate(alg1, data, n_jobs = -1, verbose=True)
-    # cross_validate(alg2, data, n_jobs = -1, verbose=True)
+    cross_validate(alg2, data, cv = 2, n_jobs = -1, verbose=True)
     # cross_validate(alg3, data, n_jobs = -1, verbose=True)
 
 
