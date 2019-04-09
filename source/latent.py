@@ -44,7 +44,7 @@ def main():
 
     # alg = SVD(n_factors = 25, verbose = True)
     # alg1 = SVD(n_factors = 50, verbose = True)
-    alg2 = SVD(n_epochs = 5 ,lr_all = 0.05, verbose = True)
+    alg2 = SVD(lr_all = 0.05, verbose = True)
     #alg3 = SVD(biased = False, verbose = True)
     
     # cross_validate(alg, data, n_jobs = -1, verbose=True)
