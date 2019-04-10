@@ -5,6 +5,7 @@
 
 import os
 import pandas as pd
+import numpy as np
 from surprise import BaselineOnly
 from surprise import NormalPredictor
 from surprise import Reader
@@ -12,21 +13,48 @@ from surprise import Dataset
 from surprise.prediction_algorithms.matrix_factorization import SVD
 from surprise.model_selection import cross_validate
 
+class dumbBaseline(AlgoBase):
+    def __init__(self):
+        AlgoBase.__init__(self)
+
+    def fit(self, trainset):
+        # Here again: call base method before doing anything.
+        AlgoBase.fit(self, trainset)
+
+        # Compute the average rating. We might as well use the
+        # trainset.global_mean attribute ;)
+        self.the_mean = trainset.global_mean
+
+        d_u = dict()
+        for u in self.train_set.ur.keys():
+            d_u[u] = np.mean([r for (_,r) in self.train_set.ur[u]]) - trainset.global_mean
+        self.dict_u = d_u
+
+        d_i = dict()
+        for u in self.train_set.ir.keys():
+            d_i[u] = np.mean([r for (_,r) in self.train_set.ir[u]]) - trainset.global_mean
+        self.dict_i = d_i
+        return self
+
+    def estimate(self, u, i):
+
+        return self.the_mean + self.dict_i[i] + self.dict_u[u]
+
+
 def main():
 
     # load dataset into dataframe
-    df = pd.read_csv('../data/ratings.csv', sep = ';')
+    train = pd.read_csv('../data/train_update.csv', sep = ';')
+    test = pd.read_csv('../data/test_update.csv', sep = ';')
     
-    # change ISBN into unique numerical value
-    df['ISBN'] = pd.factorize(df['ISBN'])[0]
 
-    print df.head(5)
+    print train.head(5)
+    print test.head(5)
 
     reader = Reader(rating_scale = (0,10))
 
-    data = Dataset.load_from_df(df[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
-    
-    # We can now use this dataset as we please, e.g. calling cross_validate
+    train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    test_set = Dataset.load_from_df(test[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
 
     bsl_options1 = {'method': 'als',
                'n_epochs': 5,
