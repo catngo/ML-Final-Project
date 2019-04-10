@@ -6,6 +6,7 @@
 import os
 import pandas as pd
 import numpy as np
+from surprise import AlgoBase
 from surprise import BaselineOnly
 from surprise import NormalPredictor
 from surprise import Reader
@@ -13,7 +14,7 @@ from surprise import Dataset
 from surprise.prediction_algorithms.matrix_factorization import SVD
 from surprise.model_selection import cross_validate
 
-class dumbBaseline(AlgoBase):
+class DumbBaseline(AlgoBase):
     def __init__(self):
         AlgoBase.__init__(self)
 
@@ -26,18 +27,17 @@ class dumbBaseline(AlgoBase):
         self.the_mean = trainset.global_mean
 
         d_u = dict()
-        for u in self.train_set.ur.keys():
-            d_u[u] = np.mean([r for (_,r) in self.train_set.ur[u]]) - trainset.global_mean
+        for u in self.trainset.ur.keys():
+            d_u[u] = np.mean([r for (_,r) in self.trainset.ur[u]]) - trainset.global_mean
         self.dict_u = d_u
 
         d_i = dict()
-        for u in self.train_set.ir.keys():
-            d_i[u] = np.mean([r for (_,r) in self.train_set.ir[u]]) - trainset.global_mean
+        for u in self.trainset.ir.keys():
+            d_i[u] = np.mean([r for (_,r) in self.trainset.ir[u]]) - trainset.global_mean
         self.dict_i = d_i
         return self
 
     def estimate(self, u, i):
-
         return self.the_mean + self.dict_i[i] + self.dict_u[u]
 
 
@@ -55,6 +55,16 @@ def main():
 
     train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
     test_set = Dataset.load_from_df(test[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    trainset = train_set.build_full_trainset() #to use when train on full train set
+
+    # intialize algo
+    baseline = DumbBaseline()
+    svd = SVD(verbose = True)
+
+    #testing on cross validate
+    cross_validate(baseline, train_set, n_jobs = -1, verbose=True)
+    cross_validate(svd, train_set, n_jobs = -1, verbose=True)
+
 
     bsl_options1 = {'method': 'als',
                'n_epochs': 5,
@@ -66,8 +76,8 @@ def main():
                'learning_rate': .00005,
                }
 
-    #cross_validate(BaselineOnly(bsl_options = bsl_options1), data, verbose=True)
     #cross_validate(BaselineOnly(bsl_options = bsl_options2), data, verbose=True)
+    #cross_validate(BaselineOnly(bsl_options = bsl_options1), data, verbose=True)
     #cross_validate(NormalPredictor(), data, verbose=True)
 
     # alg = SVD(n_factors = 25, verbose = True)
