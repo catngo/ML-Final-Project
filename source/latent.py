@@ -4,6 +4,7 @@
 """
 
 import os
+import pickle
 import pandas as pd
 import numpy as np
 from surprise import AlgoBase
@@ -90,9 +91,18 @@ def main():
     # print 'Matrix Factorization \n'
     # print 'RMSE: ', rmse(svd.test(validationset)) 1.0916621060800134
 
-    cross_validate(baseline, train_set, verbose=True)
-    cross_validate(svd, train_set, verbose=True)
+    d_baseline = cross_validate(baseline, train_set, return_train_measures=True, verbose=True)
+    d_svd = cross_validate(svd, train_set, return_train_measures = True, verbose=True)
 
+    f = open("d_baseline.pkl","wb")
+    pickle.dump(d_baseline,f)
+    f.close()
+
+    g = open("d_svd.pkl","wb")
+    pickle.dump(d_svd,g)
+    g.close()
+
+    
     bsl_options1 = {'method': 'als',
                'n_epochs': 5,
                'reg_u': 12,
