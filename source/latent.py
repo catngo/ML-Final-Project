@@ -10,6 +10,7 @@ from surprise import AlgoBase
 from surprise import BaselineOnly
 from surprise import NormalPredictor
 from surprise import Reader
+from surprise.accuracy import rmse
 from surprise import Dataset
 from surprise.prediction_algorithms.matrix_factorization import SVD
 from surprise.model_selection import cross_validate
@@ -38,9 +39,24 @@ class DumbBaseline(AlgoBase):
         return self
 
     def estimate(self, u, i):
-        return self.the_mean + self.dict_i[i] + self.dict_u[u]
+        if type(u) == int: #inner id
+            if self.trainset.knows_user(u): b_u = self.dict_u[u]
+            else: b_u = 0
+            if self.trainset.knows_item(i): b_i = self.dict_i[i]
+            else: b_i = 0
+            return self.the_mean + b_i + b_u
 
-
+        else: #raw id
+            try: 
+                uid = self.trainset.to_inner_uid(u)
+                b_u = self.dict_u[uid]
+            except: b_u = 0
+            try:
+                iid = self.trainset.to_inner_iid(i)
+                b_i = self.dict_i(iid)
+            except: b_i = 0
+            return self.the_mean + b_i + b_u
+            
 def main():
 
     # load dataset into dataframe
@@ -55,16 +71,27 @@ def main():
 
     train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
     test_set = Dataset.load_from_df(test[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
-    trainset = train_set.build_full_trainset() #to use when train on full train set
+    
+    # to use when train on full train set
+    trainset = train_set.build_full_trainset() 
+    validationset = trainset.build_testset()
 
     # intialize algo
     baseline = DumbBaseline()
-    svd = SVD(verbose = True)
+    svd = SVD()
 
-    #testing on cross validate
-    cross_validate(baseline, train_set, n_jobs = -1, verbose=True)
-    cross_validate(svd, train_set, n_jobs = -1, verbose=True)
+    # # fitting it to the training data
+    # baseline.fit(trainset)
+    # svd.fit(trainset)
 
+    # # testing in the validation set
+    # print 'Baseline \n'
+    # print 'RMSE: ', rmse(baseline.test(validationset)), '\n' 2.655720355062527
+    # print 'Matrix Factorization \n'
+    # print 'RMSE: ', rmse(svd.test(validationset)) 1.0916621060800134
+
+    cross_validate(baseline, train_set, verbose=True)
+    cross_validate(svd, train_set, verbose=True)
 
     bsl_options1 = {'method': 'als',
                'n_epochs': 5,
@@ -82,12 +109,12 @@ def main():
 
     # alg = SVD(n_factors = 25, verbose = True)
     # alg1 = SVD(n_factors = 50, verbose = True)
-    alg2 = SVD(lr_all = 0.05, verbose = True)
-    #alg3 = SVD(biased = False, verbose = True)
+    # alg2 = SVD(lr_all = 0.05, verbose = True)
+    # alg3 = SVD(biased = False, verbose = True)
     
     # cross_validate(alg, data, n_jobs = -1, verbose=True)
     # cross_validate(alg1, data, n_jobs = -1, verbose=True)
-    cross_validate(alg2, data, cv = 2, n_jobs = -1, verbose=True)
+    # cross_validate(alg2, data, cv = 2, n_jobs = -1, verbose=True)
     # cross_validate(alg3, data, n_jobs = -1, verbose=True)
 
 
