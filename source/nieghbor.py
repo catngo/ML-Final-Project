@@ -14,9 +14,9 @@ from surprise import accuracy
 from surprise.model_selection import train_test_split
 from surprise.model_selection import cross_validate
 
-import numpy as np
-from sklearn.cross_validation import train_test_split
-from sklearn.neighbors import KNeighborsClassifier
+#import numpy as np
+#from sklearn.cross_validation import train_test_split
+#from sklearn.neighbors import KNeighborsClassifier
 
 
 def main():
@@ -49,8 +49,8 @@ def main():
     # create classifier (using a basic k nearest neighbors approach)
     algo = KNNBasic()
 
-    trainset, testset = train_test_split(train_set, test_size=.48,random_state=1234)
-    algo.fit(trainset)
+    trainset, testset = train_test_split(train_set, test_size=.9,random_state=1234)
+    algo.fit(train_set)
 
     #cross_validate(algo, trainset, verbose=True)
     predictions = algo.test(testset)
@@ -59,8 +59,8 @@ def main():
     accuracy.mae(predictions)
     accuracy.rmse(predictions)
 
+    # SKLEARN SECTION
 
-    y = np.array(df['class']) 
 
 
 
