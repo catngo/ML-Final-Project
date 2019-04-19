@@ -14,7 +14,7 @@ from surprise import Reader
 from surprise.accuracy import rmse
 from surprise import Dataset
 from surprise.prediction_algorithms.matrix_factorization import SVD
-from surprise.model_selection import cross_validate
+from surprise.model_selection import train_test_split, cross_validate
 
 class DumbBaseline(AlgoBase):
     def __init__(self):
@@ -59,7 +59,7 @@ class DumbBaseline(AlgoBase):
             return self.the_mean + b_i + b_u
             
 def main():
-
+    np.random.seed(1234)
     # load dataset into dataframe
     train = pd.read_csv('../data/train_update.csv', sep = ';')
     test = pd.read_csv('../data/test_update.csv', sep = ';')
@@ -73,9 +73,12 @@ def main():
     train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
     test_set = Dataset.load_from_df(test[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
     
+
+
     # to use when train on full train set
     trainset = train_set.build_full_trainset() 
-    validationset = trainset.build_testset()
+
+    # validationset = trainset.build_testset()
 
     # intialize algo
     baseline = DumbBaseline()
@@ -91,18 +94,45 @@ def main():
     # print 'Matrix Factorization \n'
     # print 'RMSE: ', rmse(svd.test(validationset)) 1.0916621060800134
 
-    d_baseline = cross_validate(baseline, train_set, return_train_measures=True, verbose=True)
-    d_svd = cross_validate(svd, train_set, return_train_measures = True, verbose=True)
+    #d_baseline = cross_validate(baseline, train_set, return_train_measures=True, verbose=True)
+    #d_svd = cross_validate(svd, train_set, return_train_measures = True, verbose=True)
 
-    f = open("d_baseline.pkl","wb")
-    pickle.dump(d_baseline,f)
-    f.close()
+    # do 80-20 split on trainset
+    # trainset,validationset = train_test_split(train_set,random_state= 1234)
 
-    g = open("d_svd.pkl","wb")
-    pickle.dump(d_svd,g)
-    g.close()
-
+    # baseline.fit(trainset)
+    # svd.fit(trainset)
+    # validationset = 
+    # print 'Baseline \n'
+    # print rmse(baseline.test(trainset.build_testset))
+    # print 'SVD \n'
+    # print rmse(svd.test(trainset.build_testset))
     
+    
+    # do 80-20 split on set with 2 ratings up data
+    
+    train_2 = pd.read_csv('../data/train_2_up.csv', sep = ';')
+    train_2_set = Dataset.load_from_df(train_2[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    trainset_2 = train_2_set.build_full_trainset()
+    
+    trainset,validationset = train_test_split(train_2_set,random_state= 1234)
+    trainset_test = trainset.build_testset()
+
+    print trainset.n_ratings
+    print trainset_2.n_ratings
+
+
+    baseline.fit(trainset)
+    print 'Baseline \n'
+    print 'Training', rmse(baseline.test(trainset_test)), '\n'
+    print 'Testing', rmse(baseline.test(validationset))
+    
+    svd.fit(trainset)
+    print 'SVD \n'
+    print 'Training', rmse(svd.test(trainset_test)), '\n'
+    print 'Testing', rmse(svd.test(validationset))
+    
+
     bsl_options1 = {'method': 'als',
                'n_epochs': 5,
                'reg_u': 12,
