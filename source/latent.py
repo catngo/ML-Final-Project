@@ -57,6 +57,41 @@ class DumbBaseline(AlgoBase):
                 b_i = self.dict_i(iid)
             except: b_i = 0
             return self.the_mean + b_i + b_u
+
+def grid(trainset, trainset_test, validationset, n_factors, n_epochs, verbose = False):
+    print "------------------- Results from Grid Search -----------------------------"
+
+    min_train_rmse = np.inf
+    min_train_rmse_params = []
+    min_val_rmse = np.inf
+    min_val_rmse_params = []
+
+    for f in n_factors:
+        for e in n_epochs:
+            svd = SVD(n_factors=f, n_epochs=e)
+            svd.fit(trainset)
+            train_rmse = rmse(svd.test(trainset_test))
+            val_rmse = rmse(svd.test(validationset))
+            if verbose:
+                print 'SVD with params ---  n_factors: %d, n_epochs: %d',  f, e
+                print 'Training', train_rmse
+                print 'Validating', val_rmse, '\n'
+            if train_rmse < min_train_rmse:
+                min_train_rmse = train_rmse
+                min_train_rmse_params = [f,e]
+            if val_rmse < min_val_rmse:
+                min_val_rmse = val_rmse
+                min_val_rmse_params = [f,e]
+
+    print "##### SMALLEST TRAINING ERROR #####"
+    print 'Training: ', min_train_rmse
+    print 'SVD( n_factors = ', min_train_rmse_params[0], ', n_epochs = ', min_train_rmse_params[1], ')'
+    print "#### SMALLEST VALIDATING ERROR ####"
+    print 'Training: ', min_val_rmse
+    print 'SVD( n_factors = ', min_val_rmse_params[0], ', n_epochs = ', min_val_rmse_params[1], ')'
+    
+
+    print "--------------------------------------------------------------------------"
             
 def main():
     np.random.seed(1234)
@@ -131,6 +166,11 @@ def main():
     print 'SVD \n'
     print 'Training', rmse(svd.test(trainset_test)), '\n'
     print 'Testing', rmse(svd.test(validationset))
+
+    # Calling grid search
+    n_factors = [100, 200, 300]
+    n_epochs = [3, 5, 7]
+    grid(trainset, trainset_test, validationset, n_factors, n_epochs)
     
 
     bsl_options1 = {'method': 'als',
@@ -156,8 +196,6 @@ def main():
     # cross_validate(alg1, data, n_jobs = -1, verbose=True)
     # cross_validate(alg2, data, cv = 2, n_jobs = -1, verbose=True)
     # cross_validate(alg3, data, n_jobs = -1, verbose=True)
-
-
 
 
 if __name__ == "__main__" :
