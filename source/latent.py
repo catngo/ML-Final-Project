@@ -15,6 +15,7 @@ from surprise.accuracy import rmse
 from surprise import Dataset
 from surprise.prediction_algorithms.matrix_factorization import SVD
 from surprise.model_selection import train_test_split, cross_validate
+import matplotlib.pyplot as plt
 
 class DumbBaseline(AlgoBase):
     def __init__(self):
@@ -92,6 +93,7 @@ def grid(trainset, trainset_test, validationset, n_factors, n_epochs, verbose = 
     
 
     print "--------------------------------------------------------------------------"
+
             
 def main():
     np.random.seed(1234)
@@ -149,6 +151,10 @@ def main():
     train_2 = pd.read_csv('../data/train_2_up.csv', sep = ';')
     train_2_set = Dataset.load_from_df(train_2[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
     trainset_2 = train_2_set.build_full_trainset()
+
+    train_5 = pd.read_csv('../data/train_2_up.csv', sep = ';')
+    train_5_set = Dataset.load_from_df(train_5[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    trainset_5 = train_5_set.build_full_trainset()
     
     trainset,validationset = train_test_split(train_2_set,random_state= 1234)
     trainset_test = trainset.build_testset()
@@ -168,9 +174,24 @@ def main():
     print 'Testing', rmse(svd.test(validationset))
 
     # Calling grid search
-    n_factors = [100, 200, 300]
+    n_factors = [2,3,5,7,10,15,25,50]
     n_epochs = [3, 5, 7]
-    grid(trainset, trainset_test, validationset, n_factors, n_epochs)
+    # grid(trainset, trainset_test, validationset, n_factors, n_epochs)
+    
+    
+    ######## VARYING FACTORS AND MAKING PLOT ##########
+    train_errors = []
+    val_errors = []
+    for f in n_factors:
+        svd = SVD(n_factors = f)
+        svd.fit(trainset)
+        train_errors += [rmse(baseline.test(trainset_test))]
+        val_errors += [rmse(baseline.test(validationset))]
+    plt.plot(n_factors,train_errors, 'r--')
+    plt.show()
+    plt.plot(n_factors, val_errors, 'b--')
+    plt.show()
+    ###################################################
     
 
     bsl_options1 = {'method': 'als',
@@ -183,7 +204,7 @@ def main():
                'learning_rate': .00005,
                }
 
-    #cross_validate(BaselineOnly(bsl_options = bsl_options2), data, verbose=True)
+    # cross_validate(BaselineOnly(bsl_options = bsl_options2), trainset_2, verbose=True) ## NOTE: was not working
     #cross_validate(BaselineOnly(bsl_options = bsl_options1), data, verbose=True)
     #cross_validate(NormalPredictor(), data, verbose=True)
 
