@@ -15,6 +15,7 @@ from surprise.accuracy import rmse
 from surprise import Dataset
 from surprise.prediction_algorithms.matrix_factorization import SVD
 from surprise.model_selection import train_test_split, cross_validate
+from surprise.model_selection.search import GridSearchCV
 import matplotlib.pyplot as plt
 
 class DumbBaseline(AlgoBase):
@@ -58,6 +59,54 @@ class DumbBaseline(AlgoBase):
                 b_i = self.dict_i(iid)
             except: b_i = 0
             return self.the_mean + b_i + b_u
+
+def plot_performance(setNum, num_factors, reg_term):
+
+    reader = Reader(rating_scale = (0,10))
+    train = pd.read_csv('../data/train_'+str(setNum)+'.csv', sep = ';')
+    train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    data = train_set.build_full_trainset()
+
+    svd = SVD(reg_all=reg_term)
+    svd_bias = SVD(biased=True, reg_all=reg_term)
+    baseline = DumbBaseline()
+    cv_svd = cross_validate(svd, train_set, n_jobs = -2, return_train_measures=True)
+    cv_svd_bias = cross_validate(svd_bias, train_set, n_jobs = -2, return_train_measures=True)
+    cv_baseline = cross_validate(baseline, train_set, n_jobs = -2, return_train_measures=True)
+
+    test_res = [np.mean(cv_svd['test_rmse']), np.mean(cv_svd_bias['test_rmse']),np.mean(cv_baseline['test_rmse'])]
+    train_res = [np.mean(cv_svd['train_rmse']), np.mean(cv_svd_bias['train_rmse']),np.mean(cv_baseline['train_rmse'])]
+    test_err = [np.std(cv_svd['test_rmse']), np.std(cv_svd_bias['test_rmse']),np.std(cv_baseline['test_rmse'])]
+    train_err = [np.std(cv_svd['train_rmse']), np.std(cv_svd_bias['train_rmse']),np.std(cv_baseline['train_rmse'])]
+    plt.bar(['SVD', 'SVD With Bias', 'Baseline'], test_res, yerr=test_err, color=['blue', 'green', 'red'])
+    plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/ValidationBarChart'+str(setNum))
+    plt.show()
+    plt.bar(['SVD', 'SVD With Bias', 'Baseline'], train_res, yerr=train_err, color=['blue', 'green', 'red'])
+    plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/TrainingBarChart'+str(setNum))
+    plt.show()
+
+def vary_factors(setNum, n_factors):
+
+    reader = Reader(rating_scale = (0,10))
+    train = pd.read_csv('../data/train_'+str(setNum)+'.csv', sep = ';')
+    train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    data = train_set.build_full_trainset()
+
+    train_errors = []
+    val_errors = []
+    for f in n_factors:
+        svd = SVD(n_factors = f)
+        cv = cross_validate(svd, data, return_train_measures=True, n_jobs = -2, verbose=True)
+        train_errors += [np.mean(cv['train_rmse'])]
+        val_errors += [np.mean(cv['test_rmse'])]
+    print("Train errrors: ", train_errors)
+    print("Val errrors: ", val_errors)
+    plt.figure(1)
+    plt.plot(n_factors,train_errors, 'r--')
+    plt.savefig("training_error.png")
+    plt.figure(2)
+    plt.plot(n_factors, val_errors, 'b--')
+    plt.savefig("validation_error.png")
 
 def grid(trainset, trainset_test, validationset, n_factors, n_epochs, verbose = False):
     print "------------------- Results from Grid Search -----------------------------"
@@ -109,8 +158,6 @@ def main():
 
     train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
     test_set = Dataset.load_from_df(test[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
-    
-
 
     # to use when train on full train set
     trainset = train_set.build_full_trainset() 
@@ -147,22 +194,23 @@ def main():
     
     
     # do 80-20 split on set with 2 ratings up data
+
     
     train_2 = pd.read_csv('../data/train_2_up.csv', sep = ';')
     train_2_set = Dataset.load_from_df(train_2[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
     trainset_2 = train_2_set.build_full_trainset()
 
-    train_5 = pd.read_csv('../data/train_2_up.csv', sep = ';')
-    train_5_set = Dataset.load_from_df(train_5[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
-    trainset_5 = train_5_set.build_full_trainset()
+    train_15 = pd.read_csv('../data/train_30.csv', sep = ';')
+    train_15_set = Dataset.load_from_df(train_15[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    trainset_15 = train_15_set.build_full_trainset()
     
     trainset,validationset = train_test_split(train_2_set,random_state= 1234)
     trainset_test = trainset.build_testset()
 
     print trainset.n_ratings
-    print trainset_2.n_ratings
+    print trainset_15.n_ratings
 
-
+    '''
     baseline.fit(trainset)
     print 'Baseline \n'
     print 'Training', rmse(baseline.test(trainset_test)), '\n'
@@ -172,51 +220,32 @@ def main():
     print 'SVD \n'
     print 'Training', rmse(svd.test(trainset_test)), '\n'
     print 'Testing', rmse(svd.test(validationset))
-
-    # Calling grid search
-    n_factors = [2,3,5,7,10,15,25,50]
-    n_epochs = [3, 5, 7]
-    # grid(trainset, trainset_test, validationset, n_factors, n_epochs)
-    
+    '''
     
     ######## VARYING FACTORS AND MAKING PLOT ##########
-    train_errors = []
-    val_errors = []
-    for f in n_factors:
-        svd = SVD(n_factors = f)
-        svd.fit(trainset)
-        train_errors += [rmse(svd.test(trainset_test))]
-        val_errors += [rmse(svd.test(validationset))]
-    plt.plot(n_factors,train_errors, 'r--')
-    plt.show()
-    plt.plot(n_factors, val_errors, 'b--')
-    plt.show()
+    # Calling grid search, we have run and gotten plots for the following ranges
+    # FACTOR RANGE 1: [2,3,5,7,10,15,25,50,100,150,200,250,300,350,400]
+    # FACTOR RANGE 2: [100,200,300,400,500,600,700]
+    n_factors = [100,200,300,400,500,600,700]
+    # vary_factors(15, n_factors)
     ###################################################
     
+    ######## CV on 3 models + bar chart ###############
+    plot_performance(10, 200, 0.2) # setNum, factors, reg term
+    plot_performance(15, 400, 0.2) # setNum, factors, reg term
+    plot_performance(30, 600, 0.2) # setNum, factors, reg term
+    ###################################################
 
-    bsl_options1 = {'method': 'als',
-               'n_epochs': 5,
-               'reg_u': 12,
-               'reg_i': 5
-               }
+    param_grid = {'n_factors': [200,400,600,800,1000]}
+    gs = GridSearchCV(SVD, param_grid)
+    gs.fit(train_15_set)
+    # best RMSE score
+    print(gs.best_score['rmse'])
 
-    bsl_options2 = {'method': 'sgd',
-               'learning_rate': .00005,
-               }
-
-    # cross_validate(BaselineOnly(bsl_options = bsl_options2), trainset_2, verbose=True) ## NOTE: was not working
-    #cross_validate(BaselineOnly(bsl_options = bsl_options1), data, verbose=True)
-    #cross_validate(NormalPredictor(), data, verbose=True)
-
-    # alg = SVD(n_factors = 25, verbose = True)
-    # alg1 = SVD(n_factors = 50, verbose = True)
-    # alg2 = SVD(lr_all = 0.05, verbose = True)
-    # alg3 = SVD(biased = False, verbose = True)
+    # combination of parameters that gave the best RMSE score
+    print(gs.best_params['rmse'])
     
-    # cross_validate(alg, data, n_jobs = -1, verbose=True)
-    # cross_validate(alg1, data, n_jobs = -1, verbose=True)
-    # cross_validate(alg2, data, cv = 2, n_jobs = -1, verbose=True)
-    # cross_validate(alg3, data, n_jobs = -1, verbose=True)
+
 
 
 if __name__ == "__main__" :
