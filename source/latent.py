@@ -185,8 +185,8 @@ def main():
     for f in n_factors:
         svd = SVD(n_factors = f)
         svd.fit(trainset)
-        train_errors += [rmse(baseline.test(trainset_test))]
-        val_errors += [rmse(baseline.test(validationset))]
+        train_errors += [rmse(svd.test(trainset_test))]
+        val_errors += [rmse(svd.test(validationset))]
     plt.plot(n_factors,train_errors, 'r--')
     plt.show()
     plt.plot(n_factors, val_errors, 'b--')
