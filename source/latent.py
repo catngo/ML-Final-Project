@@ -7,6 +7,7 @@ import os
 import pickle
 import pandas as pd
 import numpy as np
+import csv
 from surprise import AlgoBase
 from surprise import BaselineOnly
 from surprise import NormalPredictor
@@ -78,12 +79,31 @@ def plot_performance(setNum, num_factors, reg_term):
     train_res = [np.mean(cv_svd['train_rmse']), np.mean(cv_svd_bias['train_rmse']),np.mean(cv_baseline['train_rmse'])]
     test_err = [np.std(cv_svd['test_rmse']), np.std(cv_svd_bias['test_rmse']),np.std(cv_baseline['test_rmse'])]
     train_err = [np.std(cv_svd['train_rmse']), np.std(cv_svd_bias['train_rmse']),np.std(cv_baseline['train_rmse'])]
-    plt.bar(['SVD', 'SVD With Bias', 'Baseline'], test_res, yerr=test_err, color=['blue', 'green', 'red'])
+    algs = ['SVD', 'SVD With Bias', 'Baseline']
+
+    # First Bar Chart for Training
+    plt.bar(algs, test_res, yerr=test_err, color=['blue', 'green', 'red'])
+    plt.title('Training RMSE for 3 Models on Training Set '+str(setNum))
+    plt.xlabel('Model')
+    plt.ylabel('RMSE')
     plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/ValidationBarChart'+str(setNum))
     plt.show()
-    plt.bar(['SVD', 'SVD With Bias', 'Baseline'], train_res, yerr=train_err, color=['blue', 'green', 'red'])
+
+    # Second Bar CHart for Validation
+    plt.bar(algs, train_res, yerr=train_err, color=['blue', 'green', 'red'])
     plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/TrainingBarChart'+str(setNum))
+    plt.title('Testing RMSE for 3 Models on Training Set '+str(setNum))
+    plt.xlabel('Model')
+    plt.ylabel('RMSE')
     plt.show()
+
+    # Save data from these charts
+    with open('/Users/annascomputer/Documents/GitHub/ML-Final-Project/Testing RMSE for 3 Models on Training Set '+str(setNum)+'.csv', mode='w') as f:
+        w = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        w.writerow(['Factors = ' + str(num_factors)+ ', Reg = '+ str(reg_term)])
+        w.writerow(['Alg', 'Testing Result', 'Testing STD', 'Validation Result', 'Validation STD'])
+        for i in range(4):
+            w.writerow([algs[i], test_res[i], test_err[i], train_res[i], train_err[i]])
 
 def vary_factors(setNum, n_factors):
 
