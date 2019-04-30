@@ -102,7 +102,7 @@ def plot_performance(setNum, num_factors, reg_term):
         w = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         w.writerow(['Factors = ' + str(num_factors)+ ', Reg = '+ str(reg_term)])
         w.writerow(['Alg', 'Testing Result', 'Testing STD', 'Validation Result', 'Validation STD'])
-        for i in range(4):
+        for i in range(3):
             w.writerow([algs[i], test_res[i], test_err[i], train_res[i], train_err[i]])
 
 def vary_factors(setNum, n_factors):
