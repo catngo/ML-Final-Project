@@ -8,9 +8,11 @@ import pickle
 import pandas as pd
 import numpy as np
 import csv
+import pylab
 from surprise import AlgoBase
 from surprise import BaselineOnly
 from surprise import NormalPredictor
+from surprise import KNNBasic
 from surprise import Reader
 from surprise.accuracy import rmse
 from surprise import Dataset
@@ -61,38 +63,46 @@ class DumbBaseline(AlgoBase):
             except: b_i = 0
             return self.the_mean + b_i + b_u
 
-def plot_performance(setNum, num_factors, reg_term):
-
+def get_results(setNum, num_factors, reg_term):
     reader = Reader(rating_scale = (0,10))
     train = pd.read_csv('../data/train_'+str(setNum)+'.csv', sep = ';')
+    test = pd.read_csv('../data/test_update.csv', sep = ';')
     train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    test_set = Dataset.load_from_df(test[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
     data = train_set.build_full_trainset()
 
-    svd = SVD(reg_all=reg_term)
-    svd_bias = SVD(biased=True, reg_all=reg_term)
+    svd = SVD(n_factors = num_factors, reg_all=reg_term)
+    svd_bias = SVD(n_factors = num_factors, biased=True, reg_all=reg_term)
     baseline = DumbBaseline()
+    # knn = KNNBasic(k=463) ## takes a long time to run to hard coded here
+
     cv_svd = cross_validate(svd, train_set, n_jobs = -2, return_train_measures=True)
     cv_svd_bias = cross_validate(svd_bias, train_set, n_jobs = -2, return_train_measures=True)
     cv_baseline = cross_validate(baseline, train_set, n_jobs = -2, return_train_measures=True)
+    # cv_knn = cross_validate(knn, train_set, n_jobs = -2, return_train_measures=True
 
-    test_res = [np.mean(cv_svd['test_rmse']), np.mean(cv_svd_bias['test_rmse']),np.mean(cv_baseline['test_rmse'])]
+    # getting the results ready to plot
+    val_res = [np.mean(cv_svd['test_rmse']), np.mean(cv_svd_bias['test_rmse']),np.mean(cv_baseline['test_rmse'])]
     train_res = [np.mean(cv_svd['train_rmse']), np.mean(cv_svd_bias['train_rmse']),np.mean(cv_baseline['train_rmse'])]
-    test_err = [np.std(cv_svd['test_rmse']), np.std(cv_svd_bias['test_rmse']),np.std(cv_baseline['test_rmse'])]
+    val_err = [np.std(cv_svd['test_rmse']), np.std(cv_svd_bias['test_rmse']),np.std(cv_baseline['test_rmse'])]
     train_err = [np.std(cv_svd['train_rmse']), np.std(cv_svd_bias['train_rmse']),np.std(cv_baseline['train_rmse'])]
+    test_res = [rmse(svd.test(test_set)), rmse(svd_bias.test(test_set)), rmse(baseline.test(test_set))]
     algs = ['SVD', 'SVD With Bias', 'Baseline']
 
-    # First Bar Chart for Training
-    plt.bar(algs, test_res, yerr=test_err, color=['blue', 'green', 'red'])
-    plt.title('Training RMSE for 3 Models on Training Set '+str(setNum))
+    return val_res,train_res,val_err,train_err,test_res,algs
+def plot_from_results(val_res,train_res,val_err,train_err,test_res,algs):
+    # First Bar Chart for Validation
+    plt.bar(algs, val_res, yerr=val_err, color=['m', 'r', 'g', 'b'])
+    plt.title('Validation RMSE for 3 Models on Training Set '+str(setNum))
     plt.xlabel('Model')
     plt.ylabel('RMSE')
-    plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/ValidationBarChart'+str(setNum))
+    plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/results/ValidationBarChart'+str(setNum))
     plt.show()
 
-    # Second Bar CHart for Validation
-    plt.bar(algs, train_res, yerr=train_err, color=['blue', 'green', 'red'])
-    plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/TrainingBarChart'+str(setNum))
-    plt.title('Testing RMSE for 3 Models on Training Set '+str(setNum))
+    # Second Bar Chart for Training
+    plt.bar(algs, train_res, yerr=train_err, color=['m', 'r', 'g', 'b'])
+    plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/results/TrainingBarChart'+str(setNum))
+    plt.title('Training RMSE for 3 Models on Training Set '+str(setNum))
     plt.xlabel('Model')
     plt.ylabel('RMSE')
     plt.show()
@@ -106,7 +116,6 @@ def plot_performance(setNum, num_factors, reg_term):
             w.writerow([algs[i], test_res[i], test_err[i], train_res[i], train_err[i]])
 
 def vary_factors(setNum, n_factors):
-
     reader = Reader(rating_scale = (0,10))
     train = pd.read_csv('../data/train_'+str(setNum)+'.csv', sep = ';')
     train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
@@ -116,115 +125,61 @@ def vary_factors(setNum, n_factors):
     val_errors = []
     for f in n_factors:
         svd = SVD(n_factors = f)
-        cv = cross_validate(svd, data, return_train_measures=True, n_jobs = -2, verbose=True)
+        cv = cross_validate(svd, train_set, return_train_measures=True, n_jobs = -2, verbose=True)
         train_errors += [np.mean(cv['train_rmse'])]
         val_errors += [np.mean(cv['test_rmse'])]
-    print("Train errrors: ", train_errors)
-    print("Val errrors: ", val_errors)
+    return train_errors, val_errors
+
+def plot_factors(n_factors, train_errors, val_errors):
+    # plotting 
     plt.figure(1)
-    plt.plot(n_factors,train_errors, 'r--')
-    plt.savefig("training_error.png")
-    plt.figure(2)
-    plt.plot(n_factors, val_errors, 'b--')
-    plt.savefig("validation_error.png")
+    plt.plot(n_factors,train_errors, 'r--', label='Training Error')
+    plt.plot(n_factors, val_errors, 'b--', label='Validation Error')
+    pylab.legend(loc='upper right')
+    plt.savefig("/Users/annascomputer/Documents/GitHub/ML-Final-Project/results/ErrorIncreadingFactors.png")
 
-def grid(trainset, trainset_test, validationset, n_factors, n_epochs, verbose = False):
-    print "------------------- Results from Grid Search -----------------------------"
-
-    min_train_rmse = np.inf
-    min_train_rmse_params = []
-    min_val_rmse = np.inf
-    min_val_rmse_params = []
-
-    for f in n_factors:
-        for e in n_epochs:
-            svd = SVD(n_factors=f, n_epochs=e)
-            svd.fit(trainset)
-            train_rmse = rmse(svd.test(trainset_test))
-            val_rmse = rmse(svd.test(validationset))
-            if verbose:
-                print 'SVD with params ---  n_factors: %d, n_epochs: %d',  f, e
-                print 'Training', train_rmse
-                print 'Validating', val_rmse, '\n'
-            if train_rmse < min_train_rmse:
-                min_train_rmse = train_rmse
-                min_train_rmse_params = [f,e]
-            if val_rmse < min_val_rmse:
-                min_val_rmse = val_rmse
-                min_val_rmse_params = [f,e]
-
-    print "##### SMALLEST TRAINING ERROR #####"
-    print 'Training: ', min_train_rmse
-    print 'SVD( n_factors = ', min_train_rmse_params[0], ', n_epochs = ', min_train_rmse_params[1], ')'
-    print "#### SMALLEST VALIDATING ERROR ####"
-    print 'Training: ', min_val_rmse
-    print 'SVD( n_factors = ', min_val_rmse_params[0], ', n_epochs = ', min_val_rmse_params[1], ')'
-    
-
-    print "--------------------------------------------------------------------------"
-
-            
-def main():
-    np.random.seed(1234)
-    ## load dataset into dataframe
-    train = pd.read_csv('../data/train_update.csv', sep = ';')
-    test = pd.read_csv('../data/test_update.csv', sep = ';')
-    
-
-    print train.head(5)
-    print test.head(5)
+def grid_search(setNum):
 
     reader = Reader(rating_scale = (0,10))
-
+    train = pd.read_csv('../data/train_'+str(setNum)+'.csv', sep = ';')
     train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
-    test_set = Dataset.load_from_df(test[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    data = train_set.build_full_trainset()
 
-    ## to use when train on full train set
-    trainset = train_set.build_full_trainset() 
-    # validationset = trainset.build_testset()
-
-    # intialize algo
-    baseline = DumbBaseline()
-    svd = SVD()
-    
-    ## do 80-20 split on set with 2 ratings up data
-    train_2 = pd.read_csv('../data/train_2_up.csv', sep = ';')
-    train_2_set = Dataset.load_from_df(train_2[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
-    trainset_2 = train_2_set.build_full_trainset()
-
-    train_15 = pd.read_csv('../data/train_30.csv', sep = ';')
-    train_15_set = Dataset.load_from_df(train_15[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
-    trainset_15 = train_15_set.build_full_trainset()
-    
-    trainset,validationset = train_test_split(train_2_set,random_state= 1234)
-    trainset_test = trainset.build_testset()
-
-    print trainset.n_ratings
-    print trainset_15.n_ratings
-    
-    ######## VARYING FACTORS AND MAKING PLOT ##########
-    ## Calling grid search, we have run and gotten plots for the following ranges
-    ## FACTOR RANGE 1: [2,3,5,7,10,15,25,50,100,150,200,250,300,350,400]
-    ## FACTOR RANGE 2: [100,200,300,400,500,600,700]
-    n_factors = [100,200,300,400,500,600,700]
-    # vary_factors(15, n_factors)
-    ###################################################
-    
-    ######## CV on 3 models + bar chart ###############
-    plot_performance(10, 200, 0.2) ## setNum, factors, reg term
-    plot_performance(15, 400, 0.2) ## setNum, factors, reg term
-    plot_performance(30, 600, 0.2) ## setNum, factors, reg term
-    ###################################################
-
-    ## Grid Search
     param_grid = {'n_factors': [200,400,600,800,1000]}
     gs = GridSearchCV(SVD, param_grid)
-    gs.fit(train_15_set)
+    gs.fit(data)
     ## best RMSE score
     print(gs.best_score['rmse'])
 
     ## combination of parameters that gave the best RMSE score
     print(gs.best_params['rmse'])
+            
+def main():
+    ''' Main function that calls other things depending on what we want to produce, comment in
+    or out lines of code as needed '''
+    np.random.seed(1234)
+
+    #--------- JUST GET RESULTS FROM MODELS -------#
+    ## get_results takes in: setNum, factors, reg term
+    # val_res,train_res,val_err,train_err,test_res,algs = get_results(10, 200, 0.2) 
+    # plot_from_results(val_res,train_res,val_err,train_err,test_res,algs)
+    #--------------------------------------------------#
+
+    #--------- VARYING FACTORS AND MAKING PLOT -------#
+    ## Calling grid search, we have run and gotten plots for the following ranges
+    ## FACTOR RANGE 1: [2,3,5,7,10,15,25,50,100,150,200,250,300,350,400]
+    ## FACTOR RANGE 2: [100,200,300,400,500,600,700]
+    n_factors = [100,200,300,400,500,600,700]
+    # train_errors, val_errors = vary_factors(15, n_factors)
+    train_errors = [0.8161, 0.5196, 0.3847, 0.3041, 0.2519, 0.2154, 0.1891]
+    val_errors = [3.4995, 3.4517, 3.4271, 3.4170,  3.4123, 3.4110, 3.4113]
+    
+    plot_factors(n_factors, train_errors, val_errors)
+    #--------------------------------------------------#
+
+    #--------       Grid Search Call    ---------------#
+    # grid_search(setNum)
+    #--------------------------------------------------#
 
 if __name__ == "__main__" :
     main()
@@ -268,4 +223,42 @@ if __name__ == "__main__" :
     print 'SVD \n'
     print 'Training', rmse(svd.test(trainset_test)), '\n'
     print 'Testing', rmse(svd.test(validationset))
+    '''
+    '''
+
+def grid(trainset, trainset_test, validationset, n_factors, n_epochs, verbose = False):
+    print "------------------- Results from Grid Search -----------------------------"
+
+    min_train_rmse = np.inf
+    min_train_rmse_params = []
+    min_val_rmse = np.inf
+    min_val_rmse_params = []
+
+    for f in n_factors:
+        for e in n_epochs:
+            svd = SVD(n_factors=f, n_epochs=e)
+            svd.fit(trainset)
+            train_rmse = rmse(svd.test(trainset_test))
+            val_rmse = rmse(svd.test(validationset))
+            if verbose:
+                print 'SVD with params ---  n_factors: %d, n_epochs: %d',  f, e
+                print 'Training', train_rmse
+                print 'Validating', val_rmse, '\n'
+            if train_rmse < min_train_rmse:
+                min_train_rmse = train_rmse
+                min_train_rmse_params = [f,e]
+            if val_rmse < min_val_rmse:
+                min_val_rmse = val_rmse
+                min_val_rmse_params = [f,e]
+
+    print "##### SMALLEST TRAINING ERROR #####"
+    print 'Training: ', min_train_rmse
+    print 'SVD( n_factors = ', min_train_rmse_params[0], ', n_epochs = ', min_train_rmse_params[1], ')'
+    print "#### SMALLEST VALIDATING ERROR ####"
+    print 'Training: ', min_val_rmse
+    print 'SVD( n_factors = ', min_val_rmse_params[0], ', n_epochs = ', min_val_rmse_params[1], ')'
+    
+
+    print "--------------------------------------------------------------------------"
+
     '''
