@@ -161,8 +161,8 @@ def main():
 
     #--------- JUST GET RESULTS FROM MODELS -------#
     ## get_results takes in: setNum, factors, reg term
-    # val_res,train_res,val_err,train_err,test_res,algs = get_results(10, 200, 0.2) 
-    # plot_from_results(val_res,train_res,val_err,train_err,test_res,algs)
+    val_res,train_res,val_err,train_err,test_res,algs = get_results(10, 200, 0.2) 
+    plot_from_results(val_res,train_res,val_err,train_err,test_res,algs)
     #--------------------------------------------------#
 
     #--------- VARYING FACTORS AND MAKING PLOT -------#
@@ -170,9 +170,11 @@ def main():
     ## FACTOR RANGE 1: [2,3,5,7,10,15,25,50,100,150,200,250,300,350,400]
     ## FACTOR RANGE 2: [100,200,300,400,500,600,700]
     n_factors = [100,200,300,400,500,600,700]
-    # train_errors, val_errors = vary_factors(15, n_factors)
-    train_errors = [0.8161, 0.5196, 0.3847, 0.3041, 0.2519, 0.2154, 0.1891]
-    val_errors = [3.4995, 3.4517, 3.4271, 3.4170,  3.4123, 3.4110, 3.4113]
+    train_errors, val_errors = vary_factors(15, n_factors)
+    # Note: If you don't want to run above (costly) the results are below for Frange2
+    # train_errors = [0.8161, 0.5196, 0.3847, 0.3041, 0.2519, 0.2154, 0.1891]
+    # val_errors = [3.4995, 3.4517, 3.4271, 3.4170,  3.4123, 3.4110, 3.4113]
+    
     
     plot_factors(n_factors, train_errors, val_errors)
     #--------------------------------------------------#
