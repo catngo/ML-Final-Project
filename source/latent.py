@@ -66,31 +66,29 @@ class DumbBaseline(AlgoBase):
 def get_results(setNum, num_factors, reg_term):
     reader = Reader(rating_scale = (0,10))
     train = pd.read_csv('../data/train_'+str(setNum)+'.csv', sep = ';')
-    test = pd.read_csv('../data/test_update.csv', sep = ';')
+    # test = pd.read_csv('../data/test_update.csv', sep = ';')
     train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
-    test_set = Dataset.load_from_df(test[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    # test_set = Dataset.load_from_df(test[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
     data = train_set.build_full_trainset()
 
     svd = SVD(n_factors = num_factors, reg_all=reg_term)
     svd_bias = SVD(n_factors = num_factors, biased=True, reg_all=reg_term)
     baseline = DumbBaseline()
-    # knn = KNNBasic(k=463) ## takes a long time to run to hard coded here
 
     cv_svd = cross_validate(svd, train_set, n_jobs = -2, return_train_measures=True)
     cv_svd_bias = cross_validate(svd_bias, train_set, n_jobs = -2, return_train_measures=True)
     cv_baseline = cross_validate(baseline, train_set, n_jobs = -2, return_train_measures=True)
-    # cv_knn = cross_validate(knn, train_set, n_jobs = -2, return_train_measures=True
 
     # getting the results ready to plot
     val_res = [np.mean(cv_svd['test_rmse']), np.mean(cv_svd_bias['test_rmse']),np.mean(cv_baseline['test_rmse'])]
     train_res = [np.mean(cv_svd['train_rmse']), np.mean(cv_svd_bias['train_rmse']),np.mean(cv_baseline['train_rmse'])]
     val_err = [np.std(cv_svd['test_rmse']), np.std(cv_svd_bias['test_rmse']),np.std(cv_baseline['test_rmse'])]
     train_err = [np.std(cv_svd['train_rmse']), np.std(cv_svd_bias['train_rmse']),np.std(cv_baseline['train_rmse'])]
-    test_res = [rmse(svd.test(test_set)), rmse(svd_bias.test(test_set)), rmse(baseline.test(test_set))]
     algs = ['SVD', 'SVD With Bias', 'Baseline']
 
-    return val_res,train_res,val_err,train_err,test_res,algs
-def plot_from_results(val_res,train_res,val_err,train_err,test_res,algs):
+    return val_res,train_res,val_err,train_err,algs
+
+def plot_from_results(val_res,train_res,val_err,train_err,algs):
     # First Bar Chart for Validation
     plt.bar(algs, val_res, yerr=val_err, color=['m', 'r', 'g', 'b'])
     plt.title('Validation RMSE for 3 Models on Training Set '+str(setNum))
@@ -112,7 +110,7 @@ def plot_from_results(val_res,train_res,val_err,train_err,test_res,algs):
         w = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         w.writerow(['Factors = ' + str(num_factors)+ ', Reg = '+ str(reg_term)])
         w.writerow(['Alg', 'Testing Result', 'Testing STD', 'Validation Result', 'Validation STD'])
-        for i in range(3):
+        for i in range(len(val_err)):
             w.writerow([algs[i], test_res[i], test_err[i], train_res[i], train_err[i]])
 
 def vary_factors(setNum, n_factors):
