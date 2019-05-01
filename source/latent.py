@@ -166,7 +166,7 @@ def grid(trainset, trainset_test, validationset, n_factors, n_epochs, verbose = 
             
 def main():
     np.random.seed(1234)
-    # load dataset into dataframe
+    ## load dataset into dataframe
     train = pd.read_csv('../data/train_update.csv', sep = ';')
     test = pd.read_csv('../data/test_update.csv', sep = ';')
     
@@ -179,14 +179,60 @@ def main():
     train_set = Dataset.load_from_df(train[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
     test_set = Dataset.load_from_df(test[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
 
-    # to use when train on full train set
+    ## to use when train on full train set
     trainset = train_set.build_full_trainset() 
-
     # validationset = trainset.build_testset()
 
     # intialize algo
     baseline = DumbBaseline()
     svd = SVD()
+    
+    ## do 80-20 split on set with 2 ratings up data
+    train_2 = pd.read_csv('../data/train_2_up.csv', sep = ';')
+    train_2_set = Dataset.load_from_df(train_2[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    trainset_2 = train_2_set.build_full_trainset()
+
+    train_15 = pd.read_csv('../data/train_30.csv', sep = ';')
+    train_15_set = Dataset.load_from_df(train_15[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
+    trainset_15 = train_15_set.build_full_trainset()
+    
+    trainset,validationset = train_test_split(train_2_set,random_state= 1234)
+    trainset_test = trainset.build_testset()
+
+    print trainset.n_ratings
+    print trainset_15.n_ratings
+    
+    ######## VARYING FACTORS AND MAKING PLOT ##########
+    ## Calling grid search, we have run and gotten plots for the following ranges
+    ## FACTOR RANGE 1: [2,3,5,7,10,15,25,50,100,150,200,250,300,350,400]
+    ## FACTOR RANGE 2: [100,200,300,400,500,600,700]
+    n_factors = [100,200,300,400,500,600,700]
+    # vary_factors(15, n_factors)
+    ###################################################
+    
+    ######## CV on 3 models + bar chart ###############
+    plot_performance(10, 200, 0.2) ## setNum, factors, reg term
+    plot_performance(15, 400, 0.2) ## setNum, factors, reg term
+    plot_performance(30, 600, 0.2) ## setNum, factors, reg term
+    ###################################################
+
+    ## Grid Search
+    param_grid = {'n_factors': [200,400,600,800,1000]}
+    gs = GridSearchCV(SVD, param_grid)
+    gs.fit(train_15_set)
+    ## best RMSE score
+    print(gs.best_score['rmse'])
+
+    ## combination of parameters that gave the best RMSE score
+    print(gs.best_params['rmse'])
+
+if __name__ == "__main__" :
+    main()
+
+
+###### ARCHIVED #######
+# NOTE: below are lines of code from main that are not regularly being used but can be added back if needed
+#######################
 
     # # fitting it to the training data
     # baseline.fit(trainset)
@@ -211,24 +257,6 @@ def main():
     # print rmse(baseline.test(trainset.build_testset))
     # print 'SVD \n'
     # print rmse(svd.test(trainset.build_testset))
-    
-    
-    # do 80-20 split on set with 2 ratings up data
-
-    
-    train_2 = pd.read_csv('../data/train_2_up.csv', sep = ';')
-    train_2_set = Dataset.load_from_df(train_2[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
-    trainset_2 = train_2_set.build_full_trainset()
-
-    train_15 = pd.read_csv('../data/train_30.csv', sep = ';')
-    train_15_set = Dataset.load_from_df(train_15[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
-    trainset_15 = train_15_set.build_full_trainset()
-    
-    trainset,validationset = train_test_split(train_2_set,random_state= 1234)
-    trainset_test = trainset.build_testset()
-
-    print trainset.n_ratings
-    print trainset_15.n_ratings
 
     '''
     baseline.fit(trainset)
@@ -241,32 +269,3 @@ def main():
     print 'Training', rmse(svd.test(trainset_test)), '\n'
     print 'Testing', rmse(svd.test(validationset))
     '''
-    
-    ######## VARYING FACTORS AND MAKING PLOT ##########
-    # Calling grid search, we have run and gotten plots for the following ranges
-    # FACTOR RANGE 1: [2,3,5,7,10,15,25,50,100,150,200,250,300,350,400]
-    # FACTOR RANGE 2: [100,200,300,400,500,600,700]
-    n_factors = [100,200,300,400,500,600,700]
-    # vary_factors(15, n_factors)
-    ###################################################
-    
-    ######## CV on 3 models + bar chart ###############
-    plot_performance(10, 200, 0.2) # setNum, factors, reg term
-    plot_performance(15, 400, 0.2) # setNum, factors, reg term
-    plot_performance(30, 600, 0.2) # setNum, factors, reg term
-    ###################################################
-
-    param_grid = {'n_factors': [200,400,600,800,1000]}
-    gs = GridSearchCV(SVD, param_grid)
-    gs.fit(train_15_set)
-    # best RMSE score
-    print(gs.best_score['rmse'])
-
-    # combination of parameters that gave the best RMSE score
-    print(gs.best_params['rmse'])
-    
-
-
-
-if __name__ == "__main__" :
-    main()
