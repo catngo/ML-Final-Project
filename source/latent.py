@@ -63,7 +63,7 @@ class DumbBaseline(AlgoBase):
             except: b_i = 0
             return self.the_mean + b_i + b_u
 
-def get_results(setNum, num_factors, reg_term):
+def get_results(setNum, reg_term):
     reader = Reader(rating_scale = (0,10))
     train = pd.read_csv('../data/train_'+str(setNum)+'.csv', sep = ';')
     # test = pd.read_csv('../data/test_update.csv', sep = ';')
@@ -71,8 +71,16 @@ def get_results(setNum, num_factors, reg_term):
     # test_set = Dataset.load_from_df(test[['User-ID', 'ISBN', 'Book-Rating']], reader=reader)
     data = train_set.build_full_trainset()
 
+    num_factors = 50
+    if setNum==10:
+        num_factors_b=200
+    if setNum==15:
+        num_factors_b=400
+    if setNum==30:
+        num_factors_b=600
+
     svd = SVD(n_factors = num_factors, reg_all=reg_term)
-    svd_bias = SVD(n_factors = num_factors, biased=True, reg_all=reg_term)
+    svd_bias = SVD(n_factors = num_factors_b, biased=True, reg_all=reg_term)
     baseline = DumbBaseline()
 
     cv_svd = cross_validate(svd, train_set, n_jobs = -2, return_train_measures=True)
@@ -84,11 +92,60 @@ def get_results(setNum, num_factors, reg_term):
     train_res = [np.mean(cv_svd['train_rmse']), np.mean(cv_svd_bias['train_rmse']),np.mean(cv_baseline['train_rmse'])]
     val_err = [np.std(cv_svd['test_rmse']), np.std(cv_svd_bias['test_rmse']),np.std(cv_baseline['test_rmse'])]
     train_err = [np.std(cv_svd['train_rmse']), np.std(cv_svd_bias['train_rmse']),np.std(cv_baseline['train_rmse'])]
-    algs = ['SVD', 'SVD With Bias', 'Baseline']
+    algs = ['SVD (f='+str(num_factors)+')', 'SVD With Bias (f='+str(num_factors_b)+')', 'Baseline']
 
     return val_res,train_res,val_err,train_err,algs
 
-def plot_from_results(val_res,train_res,val_err,train_err,algs):
+def add_kNN_results(setNum, val_res,train_res,val_err,train_err,algs):
+    if setNum==10:
+        k301 = [3.4330, 0.0130, 3.0850, 0.0024]
+        k547 = [3.4356, 0.0046, 3.0927, 0.0008]
+        k149697 = [3.4343, 0.0099, 3.0977, 0.0026]
+        val_res += [k301[0],k547[0],k149697[0]]
+        val_err += [k301[1],k547[1],k149697[1]]
+        train_res += [k301[2],k547[2],k149697[2]]
+        train_err += [k301[3],k547[3],k149697[3]]
+        algs += ['kNN with k=301', 'kNN with k=547', 'kNN with k=149697']
+    if setNum==15:
+        k253 = [3.3754, 0.0142, 3.0468, 0.0029]
+        k463 = [3.3766, 0.0045, 3.0580, 0.0010]
+        k107473 = [3.3750, 0.0152, 3.0663, 0.0034]
+        val_res += [k253[0],k463[0],k107473[0]]
+        val_err += [k253[1],k463[1],k107473[1]]
+        train_res += [k253[2],k463[2],k107473[2]]
+        train_err += [k253[3],k463[3],k107473[3]]
+        algs += ['kNN with k=253', 'kNN with k=463', 'kNN with k=107473']
+    if setNum==30:
+        k101 = [3.2794, 0.0097, 2.8354, 0.0021]
+        k291 = [3.2765, 0.0279, 2.8973, 0.0069]
+        k43421 = [3.2772, 0.0136, 2.9119, 0.0041]
+        val_res += [k101[0],k291[0],k43421[0]]
+        val_err += [k101[1],k291[1],k43421[1]]
+        train_res += [k101[2],k291[2],k43421[2]]
+        train_err += [k101[3],k291[3],k43421[3]]
+        algs += ['kNN with k=101', 'kNN with k=291', 'kNN with k=43421']
+    
+    return val_res,train_res,val_err,train_err,algs
+
+def read_results(setNum):
+    with open('/Users/annascomputer/Documents/GitHub/ML-Final-Project/results/Testing RMSE for 3 Models on Training Set '+str(setNum)+'.csv', mode='r') as f:
+        r = csv.reader(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        line_num = 0
+        algs, val_res, val_err, train_res, train_err = [],[],[],[],[]
+        # w.writerow(['Alg', 'Testing Result', 'Testing STD', 'Validation Result', 'Validation STD'])
+        for line in f:
+            if line_num>1:
+                parts = line.rstrip('\n').rstrip('\r').split(',')
+                algs += [parts[0]]
+                val_res += [float(parts[1])]
+                val_err += [float(parts[2])]
+                train_res += [float(parts[3])]
+                train_err += [float(parts[4])]
+            line_num+=1
+        return algs, val_res, val_err, train_res, train_err
+            # w.writerow([algs[i], test_res[i], test_err[i], train_res[i], train_err[i]])
+
+def plot_from_results(val_res,train_res,val_err,train_err,algs, setNum):
     # First Bar Chart for Validation
     plt.bar(algs, val_res, yerr=val_err, color=['m', 'r', 'g', 'b'])
     plt.title('Validation RMSE for 3 Models on Training Set '+str(setNum))
@@ -106,12 +163,11 @@ def plot_from_results(val_res,train_res,val_err,train_err,algs):
     plt.show()
 
     # Save data from these charts
-    with open('/Users/annascomputer/Documents/GitHub/ML-Final-Project/Testing RMSE for 3 Models on Training Set '+str(setNum)+'.csv', mode='w') as f:
+    with open('/Users/annascomputer/Documents/GitHub/ML-Final-Project/results/Testing RMSE for 3 Models on Training Set '+str(setNum)+'.csv', mode='w') as f:
         w = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        w.writerow(['Factors = ' + str(num_factors)+ ', Reg = '+ str(reg_term)])
-        w.writerow(['Alg', 'Testing Result', 'Testing STD', 'Validation Result', 'Validation STD'])
+        w.writerow(['Alg', 'Validation Result', 'Validation STD', 'Training Result', 'Training STD'])
         for i in range(len(val_err)):
-            w.writerow([algs[i], test_res[i], test_err[i], train_res[i], train_err[i]])
+            w.writerow([algs[i], val_res[i], val_err[i], train_res[i], train_err[i]])
 
 def vary_factors(setNum, n_factors):
     reader = Reader(rating_scale = (0,10))
@@ -159,8 +215,11 @@ def main():
 
     #--------- JUST GET RESULTS FROM MODELS -------#
     ## get_results takes in: setNum, factors, reg term
-    val_res,train_res,val_err,train_err,test_res,algs = get_results(10, 200, 0.2) 
-    plot_from_results(val_res,train_res,val_err,train_err,test_res,algs)
+    setNum = 30
+    val_res,train_res,val_err,train_err,algs = get_results(setNum, 0.2) 
+    # algs, val_res, val_err, train_res, train_err = read_results(setNum)
+    # val_res,train_res,val_err,train_err,algs = add_kNN_results(setNum, val_res,train_res,val_err,train_err,algs)
+    plot_from_results(val_res,train_res,val_err,train_err,algs, setNum)
     #--------------------------------------------------#
 
     #--------- VARYING FACTORS AND MAKING PLOT -------#
@@ -168,13 +227,13 @@ def main():
     ## FACTOR RANGE 1: [2,3,5,7,10,15,25,50,100,150,200,250,300,350,400]
     ## FACTOR RANGE 2: [100,200,300,400,500,600,700]
     n_factors = [100,200,300,400,500,600,700]
-    train_errors, val_errors = vary_factors(15, n_factors)
+    # train_errors, val_errors = vary_factors(15, n_factors)
     # Note: If you don't want to run above (costly) the results are below for Frange2
     # train_errors = [0.8161, 0.5196, 0.3847, 0.3041, 0.2519, 0.2154, 0.1891]
     # val_errors = [3.4995, 3.4517, 3.4271, 3.4170,  3.4123, 3.4110, 3.4113]
     
     
-    plot_factors(n_factors, train_errors, val_errors)
+    # plot_factors(n_factors, train_errors, val_errors)
     #--------------------------------------------------#
 
     #--------       Grid Search Call    ---------------#
