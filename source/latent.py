@@ -134,7 +134,7 @@ def read_results(setNum):
         algs, val_res, val_err, train_res, train_err = [],[],[],[],[]
         # w.writerow(['Alg', 'Testing Result', 'Testing STD', 'Validation Result', 'Validation STD'])
         for line in f:
-            if line_num>1:
+            if line_num>=1:
                 parts = line.rstrip('\n').rstrip('\r').split(',')
                 algs += [parts[0]]
                 val_res += [float(parts[1])]
@@ -147,7 +147,9 @@ def read_results(setNum):
 
 def plot_from_results(val_res,train_res,val_err,train_err,algs, setNum):
     # First Bar Chart for Validation
-    plt.bar(algs, val_res, yerr=val_err, color=['m', 'r', 'g', 'b'])
+    plt.figure(figsize=(10, 5))
+    plt.rcParams.update({'font.size': 8})
+    plt.bar(algs, val_res, yerr=val_err, color=['m', 'r', 'g', 'b','b','b'])
     plt.title('Validation RMSE for 3 Models on Training Set '+str(setNum))
     plt.xlabel('Model')
     plt.ylabel('RMSE')
@@ -155,7 +157,9 @@ def plot_from_results(val_res,train_res,val_err,train_err,algs, setNum):
     plt.show()
 
     # Second Bar Chart for Training
-    plt.bar(algs, train_res, yerr=train_err, color=['m', 'r', 'g', 'b'])
+    plt.figure(figsize=(10, 5))
+    plt.bar(algs, train_res, yerr=train_err, color=['m', 'r', 'g', 'b','b','b'])
+    plt.rcParams.update({'font.size': 8})
     plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/results/TrainingBarChart'+str(setNum))
     plt.title('Training RMSE for 3 Models on Training Set '+str(setNum))
     plt.xlabel('Model')
@@ -216,8 +220,8 @@ def main():
     #--------- JUST GET RESULTS FROM MODELS -------#
     ## get_results takes in: setNum, factors, reg term
     setNum = 30
-    val_res,train_res,val_err,train_err,algs = get_results(setNum, 0.2) 
-    # algs, val_res, val_err, train_res, train_err = read_results(setNum)
+    # val_res,train_res,val_err,train_err,algs = get_results(setNum, 0.2) 
+    algs, val_res, val_err, train_res, train_err = read_results(setNum)
     # val_res,train_res,val_err,train_err,algs = add_kNN_results(setNum, val_res,train_res,val_err,train_err,algs)
     plot_from_results(val_res,train_res,val_err,train_err,algs, setNum)
     #--------------------------------------------------#
