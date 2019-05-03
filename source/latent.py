@@ -92,7 +92,7 @@ def get_results(setNum, reg_term):
     train_res = [np.mean(cv_svd['train_rmse']), np.mean(cv_svd_bias['train_rmse']),np.mean(cv_baseline['train_rmse'])]
     val_err = [np.std(cv_svd['test_rmse']), np.std(cv_svd_bias['test_rmse']),np.std(cv_baseline['test_rmse'])]
     train_err = [np.std(cv_svd['train_rmse']), np.std(cv_svd_bias['train_rmse']),np.std(cv_baseline['train_rmse'])]
-    algs = ['SVD (f='+str(num_factors)+')', 'SVD With Bias (f='+str(num_factors_b)+')', 'Baseline']
+    algs = ['MF (k='+str(num_factors)+')', 'MF With Bias (k='+str(num_factors_b)+')', 'Baseline']
 
     return val_res,train_res,val_err,train_err,algs
 
@@ -150,7 +150,7 @@ def plot_from_results(val_res,train_res,val_err,train_err,algs, setNum):
     plt.figure(figsize=(10, 5))
     plt.rcParams.update({'font.size': 8})
     plt.bar(algs, val_res, yerr=val_err, color=['m', 'r', 'g', 'b','b','b'])
-    plt.title('Validation RMSE for 3 Models on Training Set '+str(setNum))
+    plt.title('Validation RMSE for 4 Models on Training Set '+str(setNum))
     plt.xlabel('Model')
     plt.ylabel('RMSE')
     plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/results/ValidationBarChart'+str(setNum))
@@ -160,10 +160,10 @@ def plot_from_results(val_res,train_res,val_err,train_err,algs, setNum):
     plt.figure(figsize=(10, 5))
     plt.bar(algs, train_res, yerr=train_err, color=['m', 'r', 'g', 'b','b','b'])
     plt.rcParams.update({'font.size': 8})
-    plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/results/TrainingBarChart'+str(setNum))
-    plt.title('Training RMSE for 3 Models on Training Set '+str(setNum))
+    plt.title('Training RMSE for 4 Models on Training Set '+str(setNum))
     plt.xlabel('Model')
     plt.ylabel('RMSE')
+    plt.savefig('/Users/annascomputer/Documents/GitHub/ML-Final-Project/results/TrainingBarChart'+str(setNum))
     plt.show()
 
     # Save data from these charts
@@ -193,7 +193,7 @@ def plot_factors(n_factors, train_errors, val_errors):
     plt.figure(1)
     plt.plot(n_factors,train_errors, 'r--', label='Training Error')
     plt.plot(n_factors, val_errors, 'b--', label='Validation Error')
-    pylab.legend(loc='upper right')
+    pylab.legend(loc='center right')
     plt.savefig("/Users/annascomputer/Documents/GitHub/ML-Final-Project/results/ErrorIncreadingFactors.png")
 
 def grid_search(setNum):
@@ -230,12 +230,12 @@ def main():
     ## Calling grid search, we have run and gotten plots for the following ranges
     ## FACTOR RANGE 1: [2,3,5,7,10,15,25,50,100,150,200,250,300,350,400]
     ## FACTOR RANGE 2: [100,200,300,400,500,600,700]
-    n_factors = [100,200,300,400,500,600,700]
-    # train_errors, val_errors = vary_factors(15, n_factors)
-    # Note: If you don't want to run above (costly) the results are below for Frange2
-    # train_errors = [0.8161, 0.5196, 0.3847, 0.3041, 0.2519, 0.2154, 0.1891]
-    # val_errors = [3.4995, 3.4517, 3.4271, 3.4170,  3.4123, 3.4110, 3.4113]
-    
+    n_factors = [2,3,5,7,10,15,25,50,100,150,200,250,300,350]
+    # train_errors, val_errors = vary_factors(setNum, n_factors)
+    # Note: If you don't want to run above (costly) the results are below from past computations
+    n_factors = [2,3,5,7,10,15,25,50,100,150,200,250,300,350,400,500,600,700]
+    train_errors = [2.9342, 2.8432, 2.6894 , 2.5371, 2.3407, 2.0720, 1.6850, 1.1723, 0.7564, 0.5708,  0.4635, 0.3923, 0.3407,  0.3013, 0.3041, 0.2519, 0.2154, 0.1891]
+    val_errors = [3.3380 , 3.3643, 3.4140, 3.4539, 3.4820, 3.5111, 3.5212, 3.4901, 3.4158, 3.3927, 3.3735, 3.3607, 3.3511, 3.3383, 3.4170,  3.4123, 3.4110, 3.4113]
     
     # plot_factors(n_factors, train_errors, val_errors)
     #--------------------------------------------------#
